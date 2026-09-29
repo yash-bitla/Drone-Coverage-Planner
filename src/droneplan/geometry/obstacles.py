@@ -27,6 +27,7 @@ def inflate(
     if not footprints:
         return []
     merged = shapely.union_all([shapely.make_valid(g) for g in footprints]).simplify(simplify_m)
-    grown = merged.buffer(clearance_m, join_style="mitre")
+    # Simplifying can move the boundary inward by up to simplify_m; grow by that too.
+    grown = merged.buffer(clearance_m + simplify_m, join_style="mitre")
     filled = [Polygon(p.exterior) for p in shapely.get_parts(grown) if p.geom_type == "Polygon"]
     return [p for p in shapely.get_parts(shapely.union_all(filled)) if p.area > 0]
