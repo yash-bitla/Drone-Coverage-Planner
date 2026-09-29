@@ -7,3 +7,5 @@ __pycache__/
 .coverage
 dist/
 .superpowers/
+/docs
+.DS_Store

@@ -12,5 +12,5 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check .
       - run: ruff format --check .
-      - run: mypy src
+      - run: mypy src tests benchmarks
       - run: pytest --cov=droneplan --cov-report=term-missing
