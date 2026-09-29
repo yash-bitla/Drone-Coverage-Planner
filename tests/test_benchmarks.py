@@ -9,6 +9,13 @@ def test_synthetic_instances_are_deterministic() -> None:
     assert len(a.obstacles) == len(b.obstacles)
 
 
+def test_obstacle_variant_differs_only_in_obstacles() -> None:
+    for seed in range(5):
+        a, b = synthetic_instance(seed), synthetic_instance(seed, with_obstacles=True)
+        assert a.area.equals(b.area) and (a.stations == b.stations).all()
+        assert a.config == b.config and b.obstacles
+
+
 def test_run_instance_smoke() -> None:
     for with_obstacles in (False, True):
         row = run_instance(synthetic_instance(0, with_obstacles=with_obstacles), Algorithm.RSS)

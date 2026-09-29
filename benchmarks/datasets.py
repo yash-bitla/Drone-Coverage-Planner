@@ -50,17 +50,6 @@ def synthetic_instance(seed: int, *, with_obstacles: bool = False) -> Instance:
         area = area.difference(_random_point(rng, area).buffer(rng.uniform(100, 300)))
 
     stations = [_random_point(rng, area.buffer(200)) for _ in range(int(rng.integers(1, 5)))]
-    obstacles: list[Obstacle] = []
-    if with_obstacles:
-        while len(obstacles) < int(rng.integers(1, 5)):
-            c = _random_point(rng, area)
-            w, h = rng.uniform(60, 400), rng.uniform(60, 400)
-            rect = affinity.rotate(
-                box(c.x - w / 2, c.y - h / 2, c.x + w / 2, c.y + h / 2), rng.uniform(0, 180)
-            )
-            if min(rect.distance(s) for s in stations) > 150:
-                obstacles.append(Obstacle(_to_lnglat(rect), float(rng.uniform(30, 250))))
-
     st_xy = np.array([[s.x, s.y] for s in stations])
     boundary = np.vstack([np.asarray(p.exterior.coords) for p in shapely.get_parts(area)])
     far = float(
@@ -85,6 +74,17 @@ def synthetic_instance(seed: int, *, with_obstacles: bool = False) -> Instance:
         ),
         station=StationSpec(charge_time_s=float(rng.choice([900.0, 1800.0, 2700.0]))),
     )
+    obstacles: list[Obstacle] = []
+    if with_obstacles:
+        while len(obstacles) < int(rng.integers(1, 5)):
+            c = _random_point(rng, area)
+            w, h = rng.uniform(60, 400), rng.uniform(60, 400)
+            rect = affinity.rotate(
+                box(c.x - w / 2, c.y - h / 2, c.x + w / 2, c.y + h / 2), rng.uniform(0, 180)
+            )
+            if min(rect.distance(s) for s in stations) > 150:
+                obstacles.append(Obstacle(_to_lnglat(rect), float(rng.uniform(30, 250))))
+
     suffix = "-obs" if with_obstacles else ""
     return Instance(
         f"syn-{seed:03d}{suffix}",
