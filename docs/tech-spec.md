@@ -1,6 +1,6 @@
 # Tech Spec — Multi-Drone Area Mapping Planner
 
-**Status:** v3 · core planner implemented, API and web replay planned · **Author:** Yash Bitla · **Origin:** ISRO problem statement, Smart India Hackathon 2020
+**Status:** v3 · core planner implemented, API and web replay implemented · **Author:** Yash Bitla · **Origin:** ISRO problem statement, Smart India Hackathon 2020
 
 ---
 
@@ -179,8 +179,8 @@ The same timeline drives the animation.
 | Layer | Choice | Why |
 |---|---|---|
 | Core | Python 3.12, NumPy, **Numba** (2-opt, split DP), SciPy (csgraph Dijkstra), Shapely 2 (STRtree), pyproj, GeoPandas/pyogrio | Known stack. Numba where loops dominate. |
-| API | FastAPI + Pydantic, with jobs in a process pool | Typed, with automatic docs. No Redis needed. |
-| Web | React + TypeScript + Vite, react-leaflet, Recharts | Map and obstacle editing, timeline animation, comparison charts. |
+| API | FastAPI + Pydantic, with in-memory jobs in a process pool | Typed, with automatic docs. No Redis needed. |
+| Web | React + TypeScript + Vite, react-leaflet | Map with uploaded area and obstacles and click-to-add stations, timeline replay with per-drone state and battery, SVG schedule Gantt, metrics table against the v1 baseline. |
 | Quality | pytest + Hypothesis, Vitest, ruff, mypy (strict), GitHub Actions | Invariants checked on random maps with random obstacles. |
 | Run | Docker Compose | One command. |
 
@@ -193,8 +193,9 @@ src/droneplan/
   scheduling/  model.py · charging.py · flying.py · list_scheduler.py · fixed_scheduler.py
   solvers/     rss.py · area_first.py                  # full pipelines: ours and the baselines
   baselines/   darp.py · stc.py · greedy_refuel.py     # v1 building blocks, re-implemented
+  api/         app.py · jobs.py · schemas.py           # FastAPI service
 benchmarks/    datasets.py · run.py · results/
-api/  web/     (planned)
+web/           React + Vite app
 ```
 
 The package is **`droneplan`**, named after what it does. v1's `cpp_algorithms` ("coverage path planning") described only one stage of the pipeline. The layout is organized by pipeline stage, so the directory tree reads in the same order as §3.

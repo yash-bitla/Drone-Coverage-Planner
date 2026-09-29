@@ -46,5 +46,16 @@ def plan_to_geojson(plan: Plan) -> dict[str, Any]:
     return {
         "type": "FeatureCollection",
         "features": features,
-        "properties": {"algorithm": plan.algorithm.value, "metrics": plan.metrics().as_dict()},
+        "properties": {
+            "algorithm": plan.algorithm.value,
+            "metrics": plan.metrics().as_dict(),
+            "config": {
+                "drones": drone.count,
+                "range_m": drone.range_m,
+                "usable_range_m": drone.usable_range_m,
+                "speed_mps": drone.speed_mps,
+                "charge_time_s": plan.config.station.charge_time_s,
+                "capacity": plan.config.station.capacity,
+            },
+        },
     }
