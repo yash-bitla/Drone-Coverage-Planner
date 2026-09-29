@@ -55,6 +55,35 @@ def test_validator_catches_violations() -> None:
     assert "obstacle" in kinds(s, router=Router([box(90, 40, 110, 60)]))
 
 
+def test_workload_bound_valid_when_stations_sit_near_cell_centres() -> None:
+    grid = Grid.from_mask(np.ones((1, 2), dtype=bool), 100.0, origin=(0.0, 100.0))
+    stations = np.array([[60.0, 50.0], [140.0, 50.0]])
+    cfg = PlannerConfig(
+        drone=DroneSpec(count=2, range_m=1000, speed_mps=10, accel_mps2=100, reserve_frac=0),
+        station=StationSpec(charge_time_s=100, capacity=1),
+    )
+    bodies = [Body(grid.centers(np.array([[0, c]])), np.array([[0, c]])) for c in (0, 1)]
+    s = list_schedule(bodies, stations, cfg)
+    assert s.makespan_s >= lower_bound_s(grid, stations, cfg) - 1e-9
+    assert validate_schedule(s, grid, stations, cfg) == []
+
+
+def test_endpoints_check_is_tight_at_large_plan_coordinates() -> None:
+    big = 5_000_000.0
+    grid = Grid.from_mask(np.ones((1, 2), dtype=bool), 100.0, origin=(0.0, 100.0 + big))
+    stations = STATIONS + np.array([0.0, big])
+    bodies = [Body(grid.centers(np.array([[0, c]])), np.array([[0, c]])) for c in (0, 1)]
+    s = list_schedule(bodies, stations, CFG)
+    a, b = s.flights
+    shifted_path = a.path.copy()
+    shifted_path[0, 1] += 1.0
+    shifted = replace(a, path=shifted_path)
+    kinds_ = {
+        v.kind for v in validate_schedule(replace(s, flights=(shifted, b)), grid, stations, CFG)
+    }
+    assert "endpoints" in kinds_
+
+
 def test_metrics() -> None:
     m = compute_metrics(
         schedule(), GRID, STATIONS, CFG, Router(), algorithm="rss", solve_time_s=0.1

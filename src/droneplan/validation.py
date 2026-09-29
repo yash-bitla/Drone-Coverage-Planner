@@ -38,8 +38,8 @@ def _flight_violations(
     if f.distance_m > cfg.drone.usable_range_m + _EPS:
         out.append(Violation("range", f"flight {i} is {f.distance_m:.1f} m"))
     if not (
-        np.allclose(f.path[0], stations_xy[f.launch_station])
-        and np.allclose(f.path[-1], stations_xy[f.land_station])
+        np.allclose(f.path[0], stations_xy[f.launch_station], rtol=0.0, atol=_EPS)
+        and np.allclose(f.path[-1], stations_xy[f.land_station], rtol=0.0, atol=_EPS)
     ):
         out.append(Violation("endpoints", f"flight {i} does not start and end at its stations"))
     if (
