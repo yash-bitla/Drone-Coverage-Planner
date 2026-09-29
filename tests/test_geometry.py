@@ -44,6 +44,12 @@ def test_inflate_merges_and_fills_courtyards() -> None:
     assert inflate([ring], clearance_m=0, simplify_m=0)[0].area == pytest.approx(900)
 
 
+def test_inflate_keeps_full_clearance_after_simplifying() -> None:
+    bulge = Polygon([(0, 0), (50, -5), (100, 0), (100, 100), (0, 100)])
+    (grown,) = inflate([bulge], clearance_m=1, simplify_m=10)
+    assert grown.covers(bulge.buffer(1))
+
+
 def test_rasterize_partial_cells_holes_and_obstacles() -> None:
     assert rasterize(box(0, 0, 250, 200), 100, max_cells=100).required.all()
     ring = Polygon(box(0, 0, 500, 500).exterior.coords, [box(200, 200, 300, 300).exterior.coords])

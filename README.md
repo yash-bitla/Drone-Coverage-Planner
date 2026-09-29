@@ -20,27 +20,27 @@ droneplan area.shp --stations stations.geojson --obstacles buildings.shp \
 
 | algorithm          |   makespan_min |   vs_v1_pct |   gap_to_lb_pct |   turns |   solve_s |   wins |   valid_pct |
 |:-------------------|---------------:|------------:|----------------:|--------:|----------:|-------:|------------:|
-| rss                |         262.8  |      -40.78 |          106.65 |  122.83 |      0.14 |     21 |         100 |
-| rss-full-budget    |         270.82 |      -38.34 |          115.7  |  121.27 |      0.01 |      0 |         100 |
-| rss-fixed-angle    |         271.89 |      -37.04 |          126.93 |  167.17 |      0.14 |      7 |         100 |
-| rss-greedy-split   |         287.17 |      -35.61 |          122.29 |  122.17 |      0.16 |      2 |         100 |
-| darp-stc           |         416.43 |        0    |          315.46 |  598.63 |      0.12 |      0 |         100 |
-| darp-boustrophedon |         421.94 |       -1.09 |          296.52 |  301.43 |      0.11 |      0 |         100 |
+| rss                |         256.3  |      -41.93 |          101.68 |  134.13 |      0.64 |     30 |         100 |
+| rss-full-budget    |         262.2  |      -39.85 |          110.44 |  138.67 |      0.06 |      0 |         100 |
+| rss-fixed-angle    |         271.44 |      -37.34 |          125.05 |  167.33 |      0.33 |      0 |         100 |
+| rss-greedy-split   |         279.01 |      -37.04 |          117.17 |  133.27 |      0.38 |      0 |         100 |
+| darp-stc           |         416.43 |        0    |          315.46 |  598.63 |      0.15 |      0 |         100 |
+| darp-boustrophedon |         421.94 |       -1.09 |          296.52 |  301.43 |      0.13 |      0 |         100 |
 
 ### With obstacles
 
 | algorithm          |   makespan_min |   vs_v1_pct |   gap_to_lb_pct |   turns |   solve_s |   wins |   valid_pct |
 |:-------------------|---------------:|------------:|----------------:|--------:|----------:|-------:|------------:|
-| rss                |         244.39 |      -40.51 |          112.19 |  135.77 |      0.31 |     19 |         100 |
-| rss-full-budget    |         253.48 |      -37.23 |          124.38 |  133.03 |      0.08 |      0 |         100 |
-| rss-fixed-angle    |         264.47 |      -36.3  |          128.98 |  178.33 |      0.34 |      9 |         100 |
-| rss-greedy-split   |         271.49 |      -35.85 |          126.19 |  138.97 |      0.34 |      2 |         100 |
-| darp-stc           |         389.39 |        0    |          297.49 |  596.2  |      0.2  |      0 |         100 |
-| darp-boustrophedon |         390.77 |       -2.55 |          277.49 |  302.5  |      0.17 |      0 |         100 |
+| rss                |         255.55 |      -40.79 |          110.2  |  144.43 |      1.25 |     30 |         100 |
+| rss-full-budget    |         260.38 |      -39.33 |          116.75 |  148.17 |      0.29 |      0 |         100 |
+| rss-fixed-angle    |         271.02 |      -36.85 |          127.38 |  183.4  |      0.67 |      0 |         100 |
+| rss-greedy-split   |         278.57 |      -35.73 |          128.06 |  149.9  |      0.8  |      0 |         100 |
+| darp-stc           |         412.97 |        0    |          304.45 |  615.53 |      0.22 |      0 |         100 |
+| darp-boustrophedon |         418.34 |        1.51 |          310.25 |  316.5  |      0.18 |      0 |         100 |
 
-`vs_v1_pct`: mean change in makespan vs the v1 pipeline (DARP + STC + greedy refuel). `gap_to_lb_pct`: how far above a provable lower bound.
+`vs_v1_pct`: mean change in makespan vs the v1 pipeline (DARP + STC + greedy refuel). `gap_to_lb_pct`: how far above a provable lower bound. `solve_s`: the whole `plan_area` call, including projection and router build. `rss` plans at both the min-width sweep angle and 0°, with both the DP and greedy split, and keeps the lowest makespan; each `rss-*` ablation removes one of those choices, so none can beat `rss`.
 
-The baselines (`darp-stc`, `darp-boustrophedon`) are re-implementations of v1 with its bugs fixed, and they share the same router and validator, so the comparison is fair. The comparison is on makespan, not optimality. The lower bound charges each mappable cell min(s, 2d) of flying, where s is the cell size and d the routed distance from the cell to its nearest station, plus pro-rata recharging of the energy beyond the fleet's full batteries; it ignores turns and most of the flying to and from stations, so it stays loose: `rss` averages 106.65% above it without obstacles and 112.19% with them, `darp-stc` 315.46% and 297.49%. A large `gap_to_lb_pct` therefore does not mean a plan is far from optimal. The bound is computed on each algorithm's own grid, so `gap_to_lb_pct` for the fixed-angle algorithms uses a different bound.
+The baselines (`darp-stc`, `darp-boustrophedon`) are re-implementations of v1 with its bugs fixed, and they share the same router and validator, so the comparison is fair. The comparison is on makespan, not optimality. The lower bound charges each mappable cell min(s, 2d) of flying, where s is the cell size and d the routed distance from the cell to its nearest station, plus pro-rata recharging of the energy beyond the fleet's full batteries; it ignores turns and most of the flying to and from stations, so it stays loose: `rss` averages 101.68% above it without obstacles and 110.2% with them, `darp-stc` 315.46% and 304.45%. A large `gap_to_lb_pct` therefore does not mean a plan is far from optimal. The bound is computed on each algorithm's own grid, so `gap_to_lb_pct` for the fixed-angle algorithms uses a different bound.
 
 **Limits:** the visibility graph is built over all pairs of obstacle vertices, so its cost grows with their square (about 4 s at ~800 nodes, ~64 s at ~1800); very large building layers need simplifying first.
 
