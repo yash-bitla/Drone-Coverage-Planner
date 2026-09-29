@@ -1,21 +1,3 @@
-# droneplan
-
-Plans the fastest way for a fleet of battery-limited drones to map an area, recharging at automatic stations and flying around obstacles. Built from the ISRO problem statement (Smart India Hackathon 2020). Design: `docs/tech-spec.md`.
-
-## Quick start
-```bash
-python3.12 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-droneplan area.shp --stations stations.geojson --obstacles buildings.shp \
-  --drones 4 --range-km 10 --speed 15 --out plan.geojson
-```
-
-## How it works
-1. **Route:** lanes along the minimum-width sweep angle, ordered by turn-aware nearest-neighbor + 2-opt. A visibility graph routes around obstacles.
-2. **Split:** dynamic programming chooses optimal battery-feasible cut points.
-3. **Schedule:** longest-first list scheduling with charging queues, plus a search over the sortie budget.
-4. **Validate:** one independent checker scores every algorithm, including the baselines.
-
-## Results (30 seeded synthetic areas, each with and without obstacles)
 ## Without obstacles
 
 | algorithm          |   makespan_min |   vs_v1_pct |   gap_to_lb_pct |   turns |   solve_s |   wins |   valid_pct |
@@ -37,10 +19,3 @@ droneplan area.shp --stations stations.geojson --obstacles buildings.shp \
 | rss-greedy-split   |         271.49 |      -35.85 |          394.15 |  138.97 |      0.33 |      2 |         100 |
 | darp-stc           |         389.39 |        0    |          718.18 |  596.2  |      0.19 |      0 |         100 |
 | darp-boustrophedon |         390.77 |       -2.55 |          673.74 |  302.5  |      0.16 |      0 |         100 |
-
-`vs_v1_pct`: mean change in makespan vs the v1 pipeline (DARP + STC + greedy refuel). `gap_to_lb_pct`: how far above a provable lower bound.
-
-The baselines (`darp-stc`, `darp-boustrophedon`) are re-implementations of v1 with its bugs fixed, and they share the same router and validator, so the comparison is fair. The comparison is on makespan, not optimality. The lower bound is loose: when a station is in or next to the area, the bound drops most of the charging time. A large `gap_to_lb_pct` therefore does not mean a plan is far from optimal. The bound is computed on each algorithm's own grid, so `gap_to_lb_pct` for the fixed-angle algorithms uses a different bound.
-
-## Development
-`pytest` · `ruff check .` · `mypy src` · `python -m benchmarks.run --seeds 30`
