@@ -7,5 +7,6 @@ __pycache__/
 .coverage
 dist/
 .superpowers/
-/docs
+/docs/*
+!/docs/tech-spec.md
 .DS_Store
