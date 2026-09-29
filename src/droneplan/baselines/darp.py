@@ -1,8 +1,9 @@
 """DARP (Kapoutsis et al., 2017), re-implemented as the v1 baseline.
 
 Differences from v1: counts keep a slot for drones that end up with no cells; continuity is
-4-connected; multiplicative updates are clamped so energies stay positive; the best division
-seen is returned rather than the last.
+4-connected; multiplicative updates are clamped so energies stay positive; the balance step is
+per-drone and halved when that drone's surplus changes sign; the best division seen is returned
+rather than the last.
 """
 
 from __future__ import annotations
@@ -52,9 +53,11 @@ def darp(
     diff = cells[None, :, :].astype(np.float64) - seeds[:, None, :]
     energy = np.hypot(diff[..., 0], diff[..., 1]) + 1.0
     fair = len(cells) / n
-    # Per-drone step, halved on a sign flip (a fixed step oscillates a boundary back and forth
-    # between two drones instead of settling on it).
-    steps = np.full(n, 10.0 ** -np.ceil(np.log10(len(cells))))
+    step = 10.0 ** -np.ceil(np.log10(len(cells)))
+    # Per-drone balance step, halved on a sign flip (a fixed step oscillates a boundary back and
+    # forth between two drones instead of settling on it). The continuity repair below keeps the
+    # fixed `step`: decaying it the same way weakens connectivity repair until it stops working.
+    steps = np.full(n, step)
     prev_sign = np.zeros(n)
 
     best_assign, best_key, stale = None, (np.inf, np.inf), 0
@@ -66,7 +69,7 @@ def darp(
             region = np.zeros(required.shape, dtype=bool)
             mine = cells[assign == i]
             region[mine[:, 0], mine[:, 1]] = True
-            factor, extra = _continuity_factor(region, seeds[i], cells, steps[i])
+            factor, extra = _continuity_factor(region, seeds[i], cells, step)
             split_parts += extra
             if factor is not None:
                 energy[i] *= factor

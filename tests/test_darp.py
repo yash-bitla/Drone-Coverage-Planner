@@ -21,6 +21,13 @@ def test_three_drones_on_rectangle() -> None:
     assert connected and imbalance <= 6
 
 
+def test_five_drones_continuity_step_not_decayed() -> None:
+    req = np.ones((14, 20), dtype=bool)
+    seeds = np.array([[11, 2], [6, 6], [8, 14], [8, 4], [10, 5]])
+    connected, imbalance = _regions(darp(req, seeds), 5)
+    assert connected and imbalance <= 6
+
+
 def test_duplicate_seeds_do_not_crash() -> None:
     assign = darp(np.ones((4, 4), dtype=bool), np.array([[0, 0], [0, 0]]))
     assert set(np.unique(assign)) <= {0, 1}
