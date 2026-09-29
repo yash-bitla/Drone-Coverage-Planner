@@ -83,3 +83,23 @@ def test_fixed_schedule_respects_order() -> None:
 
 def test_initial_stations_round_robin() -> None:
     assert initial_stations(5, 2) == [0, 1, 0, 1, 0]
+
+
+def test_repositions_across_multiple_hops() -> None:
+    stations = np.array([[0.0, 0.0], [600.0, 0.0], [1200.0, 0.0]])
+    s = list_schedule([body((1500, 0), (1600, 0))], stations, cfg(1))
+    assert [f.kind for f in s.flights] == [
+        FlightKind.REPOSITION,
+        FlightKind.REPOSITION,
+        FlightKind.COVERAGE,
+    ]
+    reposition_a, reposition_b, coverage = s.flights
+    assert (reposition_a.launch_station, reposition_a.land_station) == (0, 1)
+    assert (reposition_b.launch_station, reposition_b.land_station) == (1, 2)
+    assert coverage.launch_station == 2
+
+
+def test_unreachable_when_no_station_hop_bridges_the_gap() -> None:
+    stations = np.array([[0.0, 0.0], [5000.0, 0.0]])
+    with pytest.raises(InfeasiblePlanError):
+        list_schedule([body((5100, 0), (5150, 0))], stations, cfg(1))

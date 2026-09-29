@@ -4,6 +4,8 @@ import heapq
 from collections.abc import Sequence
 
 import numpy as np
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import shortest_path
 
 from droneplan._types import FloatArray
 from droneplan.config import PlannerConfig
@@ -34,6 +36,15 @@ def list_schedule(
     to_first = router.distances(np.array([b.xy[0] for b in bodies]), stations_xy)
     from_last = router.distances(np.array([b.xy[-1] for b in bodies]), stations_xy)
     hops = router.distances(stations_xy, stations_xy)
+    n_stations = len(stations_xy)
+    si, sj = np.triu_indices(n_stations, 1)
+    hop_ok = hops[si, sj] <= usable + _EPS
+    hop_graph = csr_matrix(
+        (hops[si[hop_ok], sj[hop_ok]], (si[hop_ok], sj[hop_ok])), shape=(n_stations, n_stations)
+    )
+    station_dist, station_pred = shortest_path(
+        hop_graph, method="D", directed=False, return_predecessors=True
+    )
     home = to_first.argmin(axis=1)
     reachable = to_first + (lengths + from_last.min(axis=1))[:, None] <= usable + _EPS
 
@@ -62,13 +73,21 @@ def list_schedule(
         )
 
         if choice is None:
-            target = int(home[remaining[0]])
-            if hops[s, target] > usable + _EPS:
+            target_body = next(
+                (i for i in remaining if home[i] != s and np.isfinite(station_dist[s, home[i]])),
+                None,
+            )
+            if target_body is None:
                 continue
-            path = router.path(stations_xy[s], stations_xy[target])
-            f = fly(drone, FlightKind.REPOSITION, s, target, t, path, _NO_CELLS, network, cfg)
+            target = int(home[target_body])
+            chain = [target]
+            while chain[-1] != s:
+                chain.append(int(station_pred[s, chain[-1]]))
+            next_station = chain[-2]
+            path = router.path(stations_xy[s], stations_xy[next_station])
+            f = fly(drone, FlightKind.REPOSITION, s, next_station, t, path, _NO_CELLS, network, cfg)
             flights.append(f)
-            heapq.heappush(heap, (f.charge_end, drone, target))
+            heapq.heappush(heap, (f.charge_end, drone, next_station))
             continue
 
         remaining.remove(choice)
