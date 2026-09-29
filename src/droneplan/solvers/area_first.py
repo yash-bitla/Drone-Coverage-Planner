@@ -22,13 +22,16 @@ from droneplan.scheduling.model import Schedule, initial_stations
 def _stc_with_leftovers(
     grid: Grid,
     region: np.ndarray,
-    seed: tuple[int, int],
+    station_xy: FloatArray,
     stations_xy: FloatArray,
     cfg: PlannerConfig,
     router: Router,
 ) -> tuple[FloatArray, np.ndarray]:
     assert grid.blocked is not None
-    rc = stc_path(region, seed, allowed=~grid.blocked)
+    region_cells = np.argwhere(region)
+    start = region_cells[int(np.argmin(np.hypot(*(grid.centers(region_cells) - station_xy).T)))]
+    start_rc = (int(start[0]), int(start[1]))
+    rc = stc_path(region, start_rc, allowed=~grid.blocked)
     leftover = region.copy()
     leftover[rc[:, 0], rc[:, 1]] = False
     if leftover.any():
@@ -56,8 +59,9 @@ def _area_first(
             per_drone.append([])
             continue
         if coverage == "stc":
-            seed = (int(seeds[d, 0]), int(seeds[d, 1]))
-            xy, rc = _stc_with_leftovers(grid, region, seed, stations_xy, cfg, router)
+            xy, rc = _stc_with_leftovers(
+                grid, region, stations_xy[starts[d]], stations_xy, cfg, router
+            )
         else:
             tour = build_tour(grid, stations_xy, cfg.drone, router, mask=region)
             xy, rc = tour.xy, tour.rc

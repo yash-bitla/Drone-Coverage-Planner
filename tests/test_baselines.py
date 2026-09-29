@@ -41,6 +41,15 @@ def test_greedy_refuel_flights_within_range() -> None:
     }
 
 
+def test_greedy_refuel_resumes_at_next_point_after_a_long_step() -> None:
+    xy = np.array([[450.0, 0.0], [-450.0, 0.0]])
+    rc = np.array([[0, 0], [0, 1]], dtype=np.int64)
+    flights = greedy_refuel(xy, rc, np.array([[0.0, 0.0]]), 0, 1000.0)
+    assert len(flights) == 2
+    assert all(polyline_length(f.path) <= 1000.0 + 1e-9 for f in flights)
+    assert [tuple(c) for f in flights for c in f.covered.tolist()] == [(0, 0), (0, 1)]
+
+
 @pytest.mark.parametrize("algorithm", [Algorithm.DARP_STC, Algorithm.DARP_BOUSTROPHEDON])
 def test_baselines_valid_without_obstacles(algorithm: Algorithm) -> None:
     grid = Grid.from_mask(np.ones((6, 20), dtype=bool), 50.0, origin=(0.0, 300.0))

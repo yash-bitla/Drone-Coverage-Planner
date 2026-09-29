@@ -51,8 +51,10 @@ def greedy_refuel(
             continue
         land = int(near_idx[k])
         flights.append(planned(i0, k, launch, land))
-        launch, i0, used = land, k, float(near[k])
-        if used + steps[k] + near[k + 1] > usable_range_m + _EPS:
+        launch, k = land, k + 1
+        i0 = k
+        used = float(router.distances(stations_xy[launch], path_xy[k])[0, 0])
+        if used + near[k] > usable_range_m + _EPS:
             raise InfeasiblePlanError("range too short to advance along the path")
     flights.append(planned(i0, last, launch, int(near_idx[last])))
     return flights

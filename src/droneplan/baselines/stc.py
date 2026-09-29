@@ -2,8 +2,9 @@
 
 Cells are grouped into 2x2 mega-cells; each mega-cell's four sub-cells form a 4-cycle, and
 re-wiring the cycles across every spanning-tree edge yields one Hamiltonian circuit per
-connected component. Mega-cells with a blocked sub-cell, or on an odd trailing row/column,
-are left out; the caller covers any cells they leave behind.
+connected component. Mega-cells with a blocked, out-of-region, or otherwise ineligible
+sub-cell, or on an odd trailing row/column, are left out; the caller covers any cells they
+leave behind.
 """
 
 from __future__ import annotations
@@ -78,7 +79,7 @@ def _circuit(mask: BoolArray, root: Cell) -> list[Cell]:
 def stc_path(region: BoolArray, start_rc: tuple[int, int], allowed: BoolArray) -> IntArray:
     h2, w2 = region.shape[0] // 2, region.shape[1] // 2
     quads = (h2, 2, w2, 2)
-    mega = region[: 2 * h2, : 2 * w2].reshape(quads).any(axis=(1, 3)) & allowed[
+    mega = region[: 2 * h2, : 2 * w2].reshape(quads).all(axis=(1, 3)) & allowed[
         : 2 * h2, : 2 * w2
     ].reshape(quads).all(axis=(1, 3))
     labels, n_comp = ndimage.label(mega)
