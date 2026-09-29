@@ -26,3 +26,8 @@ def test_missing_crs_rejected(tmp_path: Path) -> None:
     gpd.GeoDataFrame(geometry=[box(0, 0, 1, 1)]).to_file(tmp_path / "nocrs.shp")
     with pytest.raises(InvalidInputError):
         load_area(tmp_path / "nocrs.shp")
+
+
+def test_load_area_missing_path_rejected(tmp_path: Path) -> None:
+    with pytest.raises(InvalidInputError):
+        load_area(tmp_path / "missing.geojson")

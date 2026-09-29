@@ -52,8 +52,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     except PlannerError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    with open(args.out, "w") as fh:
-        json.dump(plan_to_geojson(plan), fh)
+    try:
+        with open(args.out, "w") as fh:
+            json.dump(plan_to_geojson(plan), fh)
+    except OSError as exc:
+        print(f"error: cannot write {args.out}: {exc}", file=sys.stderr)
+        return 2
     m = plan.metrics()
     print(
         f"makespan {m.makespan_s / 60:.1f} min (lower bound {m.lower_bound_s / 60:.1f}, "

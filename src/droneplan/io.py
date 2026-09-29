@@ -6,6 +6,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import shapely
+from pyogrio.errors import DataSourceError
 from shapely.geometry.base import BaseGeometry
 
 from droneplan._types import FloatArray
@@ -16,7 +17,10 @@ _POLYGONAL = ["Polygon", "MultiPolygon"]
 
 
 def _read_wgs84(path: str | Path) -> gpd.GeoDataFrame:
-    gdf = gpd.read_file(path)
+    try:
+        gdf = gpd.read_file(path)
+    except (OSError, DataSourceError) as exc:
+        raise InvalidInputError(f"{path}: cannot read ({exc})") from exc
     if gdf.crs is None:
         raise InvalidInputError(f"{path}: missing CRS (.prj)")
     return gdf.to_crs(epsg=4326)

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
+import pytest
 from shapely.geometry import Point, box
 
 from droneplan.cli import main
@@ -54,3 +55,45 @@ def test_cli_writes_plan(tmp_path: Path) -> None:
     )
     assert code == 0
     assert json.loads(out.read_text())["type"] == "FeatureCollection"
+
+
+def test_cli_missing_area_reports_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    gpd.GeoDataFrame(geometry=[Point(78.0, 20.0)], crs=4326).to_file(tmp_path / "st.geojson")
+    code = main(
+        [
+            str(tmp_path / "missing.geojson"),
+            "--stations",
+            str(tmp_path / "st.geojson"),
+            "--drones",
+            "2",
+            "--range-km",
+            "8",
+            "--speed",
+            "12",
+            "--out",
+            str(tmp_path / "plan.geojson"),
+        ]
+    )
+    assert code == 2
+    assert capsys.readouterr().err.startswith("error:")
+
+
+def test_cli_unwritable_out_reports_error(tmp_path: Path) -> None:
+    gpd.GeoDataFrame(geometry=[AREA], crs=4326).to_file(tmp_path / "area.geojson")
+    gpd.GeoDataFrame(geometry=[Point(78.0, 20.0)], crs=4326).to_file(tmp_path / "st.geojson")
+    code = main(
+        [
+            str(tmp_path / "area.geojson"),
+            "--stations",
+            str(tmp_path / "st.geojson"),
+            "--drones",
+            "2",
+            "--range-km",
+            "8",
+            "--speed",
+            "12",
+            "--out",
+            str(tmp_path / "no_such_dir" / "plan.geojson"),
+        ]
+    )
+    assert code == 2
