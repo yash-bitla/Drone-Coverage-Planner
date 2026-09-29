@@ -15,7 +15,7 @@ docker compose up --build      # then open http://localhost:8000
 ```
 Or for development: `pip install -e ".[dev,api]" && uvicorn droneplan.api.app:app --reload`, and in another terminal `cd web && pnpm install && pnpm dev` (http://localhost:5173).
 
-Upload an area (`examples/area.geojson`) and obstacles (`examples/obstacles.geojson`), add charging stations on the map, and click **Plan**. The replay shows each drone's position, state (flying, queued, charging) and battery, a schedule Gantt chart, and the metrics next to the v1 baseline.
+Upload `examples/area.geojson`, `examples/obstacles.geojson` and `examples/stations.geojson` (stations can also be added on the map), set Drones 4, Range 12 km and Speed 15 m/s, and click **Plan**. The replay shows each drone's position, state (flying, queued, charging) and battery, a schedule Gantt chart, and the metrics next to the v1 baseline.
 
 ## How it works
 1. **Route:** lanes along the minimum-width sweep angle, ordered by turn-aware nearest-neighbor + 2-opt. A visibility graph routes around obstacles.

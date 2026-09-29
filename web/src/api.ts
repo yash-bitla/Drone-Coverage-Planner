@@ -1,10 +1,20 @@
 import type { Geometry, Job, LngLat, ObstacleIn, PlanRequest, PlanResult } from "./types";
 
+function describe(detail: unknown): string | undefined {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((d: { loc?: unknown[]; msg?: string }) => `${String(d.loc?.at(-1) ?? "request")}: ${d.msg ?? JSON.stringify(d)}`)
+      .join("; ");
+  }
+  return detail ? JSON.stringify(detail) : undefined;
+}
+
 async function body<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const payload = (await res.json().catch(() => ({}))) as { detail?: unknown };
     const detail = payload.detail;
-    throw new Error(typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : res.statusText);
+    throw new Error(describe(detail) ?? res.statusText);
   }
   return (await res.json()) as T;
 }

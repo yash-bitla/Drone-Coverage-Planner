@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { droneColor } from "../colors";
 import { ganttBars } from "../gantt";
 import type { PlanResult } from "../types";
@@ -7,7 +8,7 @@ const WIDTH = 1000;
 const FILL = { queue: "#e5e7eb", charge: "#86efac", reposition: "#9ca3af" } as const;
 
 export function ScheduleGantt({ plan, t }: { plan: PlanResult; t: number }) {
-  const { bars, drones, end } = ganttBars(plan);
+  const { bars, drones, end } = useMemo(() => ganttBars(plan), [plan]);
   const x = (s: number) => (end > 0 ? (s / end) * WIDTH : 0);
   return (
     <svg className="gantt" viewBox={`0 0 ${WIDTH} ${drones * ROW}`} preserveAspectRatio="none">

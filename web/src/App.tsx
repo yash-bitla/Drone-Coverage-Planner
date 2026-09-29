@@ -26,27 +26,39 @@ export function App() {
   const playback = usePlayback(timeline?.end ?? 0);
   const snapshot = timeline ? snapshotAt(timeline, playback.t) : [];
 
-  const update = (patch: Partial<Inputs>) => setInputs((prev) => ({ ...prev, ...patch }));
-  const addStation = (p: LngLat) => addingStations && update({ stations: [...inputs.stations, p] });
+  const update = (patch: Partial<Inputs>) => {
+    if ("area" in patch || "obstacles" in patch || "stations" in patch) setResults({});
+    setInputs((prev) => ({ ...prev, ...patch }));
+  };
+  const addStation = (p: LngLat) => {
+    if (!addingStations) return;
+    setResults({});
+    setInputs((prev) => ({ ...prev, stations: [...prev.stations, p] }));
+  };
 
   async function run() {
     setBusy(true);
     setError(null);
     setResults({});
     playback.reset();
-    try {
-      const jobs: [Slot, Algorithm][] = [["primary", inputs.algorithm]];
-      if (inputs.compare && inputs.algorithm !== "darp-stc") jobs.push(["baseline", "darp-stc"]);
-      const done = await Promise.all(
-        jobs.map(async ([slot, algorithm]) => [slot, await waitForPlan(await submitPlan(toRequest(inputs, algorithm)))] as const),
-      );
-      setResults(Object.fromEntries(done));
-      setShown("primary");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
+    const jobs: [Slot, Algorithm][] = [["primary", inputs.algorithm]];
+    if (inputs.compare && inputs.algorithm !== "darp-stc") jobs.push(["baseline", "darp-stc"]);
+    const settled = await Promise.allSettled(
+      jobs.map(async ([, algorithm]) => waitForPlan(await submitPlan(toRequest(inputs, algorithm)))),
+    );
+    const next: Partial<Record<Slot, PlanResult>> = {};
+    settled.forEach((r, i) => {
+      if (r.status === "fulfilled") next[jobs[i][0]] = r.value;
+    });
+    setResults(next);
+    setShown("primary");
+    const failed = settled.flatMap((r, i) => (r.status === "rejected" ? [[jobs[i][0], r.reason] as const] : []));
+    const messages = failed.map(([slot, reason]) => {
+      const text = reason instanceof Error ? reason.message : String(reason);
+      return slot === "baseline" ? `darp-stc baseline failed: ${text}` : text;
+    });
+    setError(messages.length ? messages.join("; ") : null);
+    setBusy(false);
   }
 
   return (

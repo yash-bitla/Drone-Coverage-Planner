@@ -33,7 +33,9 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export function ControlsPanel({ inputs, onChange, onRun, busy, addingStations, onToggleAddStations }: Props) {
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  async function upload<T>(file: File | undefined, parse: (f: File) => Promise<T>, apply: (value: T) => void) {
+  async function upload<T>(input: HTMLInputElement, parse: (f: File) => Promise<T>, apply: (value: T) => void) {
+    const file = input.files?.[0];
+    input.value = "";
     if (!file) return;
     setUploadError(null);
     try {
@@ -48,15 +50,15 @@ export function ControlsPanel({ inputs, onChange, onRun, busy, addingStations, o
       <h2>Inputs</h2>
       <label>
         Area to map (.zip shapefile or .geojson)
-        <input type="file" accept=".zip,.geojson,.json,.gpkg" onChange={(e) => upload(e.target.files?.[0], parseArea, (area) => onChange({ area }))} />
+        <input type="file" accept=".zip,.geojson,.json,.gpkg" onChange={(e) => upload(e.target, parseArea, (area) => onChange({ area }))} />
       </label>
       <label>
         Obstacles, optional (height field <code>height_m</code>)
-        <input type="file" accept=".zip,.geojson,.json,.gpkg" onChange={(e) => upload(e.target.files?.[0], parseObstacles, (obstacles) => onChange({ obstacles }))} />
+        <input type="file" accept=".zip,.geojson,.json,.gpkg" onChange={(e) => upload(e.target, parseObstacles, (obstacles) => onChange({ obstacles }))} />
       </label>
       <label>
         Charging stations from file, optional
-        <input type="file" accept=".zip,.geojson,.json,.gpkg" onChange={(e) => upload(e.target.files?.[0], parseStations, (stations) => onChange({ stations }))} />
+        <input type="file" accept=".zip,.geojson,.json,.gpkg" onChange={(e) => upload(e.target, parseStations, (stations) => onChange({ stations }))} />
       </label>
       <div className="row">
         <button type="button" onClick={onToggleAddStations} className={addingStations ? "active" : ""}>

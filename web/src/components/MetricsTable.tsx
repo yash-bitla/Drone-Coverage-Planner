@@ -26,7 +26,7 @@ export function MetricsTable({ primary, baseline }: { primary?: PlanResult; base
   return (
     <section className="panel">
       <h2>Results</h2>
-      {speedup !== null && <p className="headline">{pct(speedup)} faster than the v1 baseline</p>}
+      {speedup !== null && <p className="headline">{pct(Math.abs(speedup))} {speedup >= 0 ? "faster" : "slower"} than the v1 baseline</p>}
       <table>
         <thead>
           <tr>
