@@ -2,6 +2,8 @@
 
 Plans the fastest way for a fleet of battery-limited drones to map an area, recharging at automatic stations and flying around obstacles. Built from the ISRO problem statement (Smart India Hackathon 2020).
 
+This is a from-scratch rebuild of our team's SIH 2020 project, [CoveragePathPlanning](https://github.com/18alantom/CoveragePathPlanning) (v1 throughout this README), which it benchmarks against.
+
 ![Replay of a 4-drone plan over Los Angeles: coverage lanes, drone states and batteries, and the schedule Gantt, compared with the v1 baseline](demo.gif)
 
 ## The problem
