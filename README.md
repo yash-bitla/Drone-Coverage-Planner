@@ -2,6 +2,8 @@
 
 Plans the fastest way for a fleet of battery-limited drones to map an area, recharging at automatic stations and flying around obstacles. Built from the ISRO problem statement (Smart India Hackathon 2020).
 
+![Replay of a 4-drone plan over Los Angeles: coverage lanes, drone states and batteries, and the schedule Gantt, compared with the v1 baseline](demo.gif)
+
 ## Quick start
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
