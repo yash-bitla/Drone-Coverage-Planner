@@ -2,9 +2,8 @@
 
 Cells are grouped into 2x2 mega-cells; each mega-cell's four sub-cells form a 4-cycle, and
 re-wiring the cycles across every spanning-tree edge yields one Hamiltonian circuit per
-connected component. Mega-cells with a blocked, out-of-region, or otherwise ineligible
-sub-cell, or on an odd trailing row/column, are left out; the caller covers any cells they
-leave behind.
+connected component. Mega-cells with a blocked or out-of-region sub-cell, or on an odd
+trailing row/column, are left out; the caller covers any cells they leave behind.
 """
 
 from __future__ import annotations

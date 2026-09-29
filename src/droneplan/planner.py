@@ -82,21 +82,31 @@ class Plan:
         )
 
 
+def _algorithm(value: Algorithm | str) -> Algorithm:
+    try:
+        return Algorithm(value)
+    except ValueError as exc:
+        raise InvalidInputError(f"unknown algorithm {value!r}") from exc
+
+
 def plan_on_grid(
     grid: Grid,
     stations_xy: npt.ArrayLike,
     cfg: PlannerConfig,
-    algorithm: Algorithm = Algorithm.RSS,
+    algorithm: Algorithm | str = Algorithm.RSS,
     router: Router | None = None,
 ) -> Plan:
+    """Plan on a grid already in plan-frame metres; `router` must hold the inflated obstacles.
+
+    The result has no geographic frame, so it cannot be exported to GeoJSON.
+    """
+    algorithm = _algorithm(algorithm)
     router = router or Router()
     stations = np.asarray(stations_xy, dtype=np.float64).reshape(-1, 2)
     if len(stations) == 0:
         raise InvalidInputError("at least one charging station is required")
     if router.contains(stations).any():
         raise InvalidInputError("a charging station lies inside an obstacle's clearance zone")
-    if algorithm not in SOLVERS:
-        raise InvalidInputError(f"unknown algorithm {algorithm!r}")
     t0 = time.perf_counter()
     schedule = SOLVERS[algorithm](grid, stations, cfg, router)
     return Plan(algorithm, grid, stations, cfg, schedule, time.perf_counter() - t0, router)
@@ -106,9 +116,15 @@ def plan_area(
     area_lnglat: BaseGeometry,
     stations_lnglat: npt.ArrayLike,
     cfg: PlannerConfig,
-    algorithm: Algorithm = Algorithm.RSS,
+    algorithm: Algorithm | str = Algorithm.RSS,
     obstacles: Sequence[Obstacle] = (),
 ) -> Plan:
+    """Plan from lon/lat inputs; `obstacles` are raw footprints with heights, filtered by the
+    flight altitude and inflated by the clearance here.
+
+    The result carries its frame, so it can be exported with `plan_to_geojson`.
+    """
+    algorithm = _algorithm(algorithm)
     base = Frame.for_geometry(area_lnglat)
     area_utm = base.geometry_to_utm(area_lnglat)
     angle = min_width_sweep_angle(area_utm) if algorithm.optimizes_sweep_angle else 0.0

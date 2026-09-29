@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 from droneplan._types import FloatArray
 from droneplan.config import PlannerConfig
 from droneplan.geometry.grid import Grid
@@ -11,16 +13,15 @@ def lower_bound_s(
 ) -> float:
     """max(workload, pad capacity, reach); each term alone bounds the makespan.
 
-    workload: a flight covering m distinct cell centres flies at least (m-1)s plus two station
-    legs of at least delta each, so the n_required cells need at least n_required * min(s, 2*delta)
-    of flying; energy beyond the n full batteries must be recharged; n drones share flying and
-    charging. pads: that recharging fits on the stations' pads. reach: the farthest cell needs an
-    out-and-back from its nearest station.
+    workload: a flight visiting distinct cell centres c1..cm flies at least
+    near(c1) + (m-1)s + near(cm) >= sum_i min(s, 2*near(ci)), so covering every required cell
+    takes at least the sum of min(s, 2*near(c)) over them of flying; energy beyond the n full
+    batteries must be recharged; n drones share flying and charging. pads: that recharging fits
+    on the stations' pads. reach: the farthest cell needs an out-and-back from its nearest station.
     """
     d = cfg.drone
     near, _ = (router or Router()).nearest(grid.centers(grid.required_cells()), stations_xy)
-    delta = float(near.min())
-    sweep_m = grid.n_required * min(grid.cell_size, 2.0 * delta)
+    sweep_m = float(np.minimum(grid.cell_size, 2.0 * near).sum())
     charge_s = (
         max(0.0, sweep_m - d.count * d.usable_range_m) / d.range_m * cfg.station.charge_time_s
     )

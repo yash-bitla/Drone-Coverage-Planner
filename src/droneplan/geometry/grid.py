@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import shapely
@@ -24,7 +24,7 @@ class Grid:
     required: BoolArray
     cell_size: float
     origin: tuple[float, float] = (0.0, 0.0)
-    blocked: BoolArray | None = None
+    blocked: BoolArray = field(default_factory=lambda: np.zeros((0, 0), dtype=bool))
     n_unmappable: int = 0
 
     def __post_init__(self) -> None:
@@ -34,8 +34,10 @@ class Grid:
             raise InvalidInputError("cell_size must be > 0")
         if not self.required.any():
             raise InvalidInputError("area contains no mappable cells")
-        if self.blocked is None:
+        if self.blocked.size == 0:
             object.__setattr__(self, "blocked", np.zeros_like(self.required))
+        elif self.blocked.shape != self.required.shape:
+            raise InvalidInputError("blocked must have the same shape as required")
 
     @classmethod
     def from_mask(
@@ -53,6 +55,11 @@ class Grid:
 
     def required_cells(self) -> IntArray:
         return np.argwhere(self.required).astype(np.int64)
+
+    def inside(self, rc: IntArray) -> IntArray:
+        h, w = self.shape
+        ok = (rc[:, 0] >= 0) & (rc[:, 0] < h) & (rc[:, 1] >= 0) & (rc[:, 1] < w)
+        return rc[ok]
 
     def centers(self, rc: IntArray) -> FloatArray:
         rc = np.asarray(rc).reshape(-1, 2)

@@ -25,6 +25,11 @@ def turn_loss_s(speed_mps: float, accel_mps2: float, dtheta: npt.ArrayLike) -> F
     return (speed_mps / accel_mps2) * (1.0 - np.cos(dtheta)) / 2.0
 
 
+def segment_lengths(xy: FloatArray) -> FloatArray:
+    d = np.diff(np.asarray(xy, dtype=np.float64), axis=0)
+    return np.hypot(d[:, 0], d[:, 1])
+
+
 def _segments(xy: FloatArray) -> tuple[FloatArray, FloatArray, npt.NDArray[np.intp]]:
     d = np.diff(np.asarray(xy, dtype=np.float64), axis=0)
     length = np.hypot(d[:, 0], d[:, 1])
@@ -33,10 +38,7 @@ def _segments(xy: FloatArray) -> tuple[FloatArray, FloatArray, npt.NDArray[np.in
 
 
 def polyline_length(xy: FloatArray) -> float:
-    if len(xy) < 2:
-        return 0.0
-    d = np.diff(np.asarray(xy, dtype=np.float64), axis=0)
-    return float(np.hypot(d[:, 0], d[:, 1]).sum())
+    return float(segment_lengths(xy).sum())
 
 
 def vertex_times(xy: FloatArray, speed_mps: float, accel_mps2: float) -> FloatArray:

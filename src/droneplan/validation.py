@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from droneplan._types import FloatArray, IntArray
+from droneplan._types import FloatArray
 from droneplan.config import PlannerConfig
 from droneplan.geometry.grid import Grid
 from droneplan.geometry.routing import Router
@@ -22,11 +22,6 @@ class Violation:
 
 def _keys(xy: FloatArray) -> set[tuple[float, float]]:
     return {(round(float(x), 3), round(float(y), 3)) for x, y in xy}
-
-
-def _inside(rc: IntArray, shape: tuple[int, int]) -> IntArray:
-    ok = (rc[:, 0] >= 0) & (rc[:, 0] < shape[0]) & (rc[:, 1] >= 0) & (rc[:, 1] < shape[1])
-    return rc[ok]
 
 
 def _flight_violations(
@@ -67,7 +62,7 @@ def validate_schedule(
     covered = np.zeros(grid.shape, dtype=bool)
     for i, f in enumerate(schedule.flights):
         out += _flight_violations(i, f, grid, stations_xy, cfg)
-        rc = _inside(f.covered, grid.shape)
+        rc = grid.inside(f.covered)
         covered[rc[:, 0], rc[:, 1]] = True
 
     missing = int((grid.required & ~covered).sum())

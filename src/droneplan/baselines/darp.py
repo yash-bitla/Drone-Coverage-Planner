@@ -54,9 +54,8 @@ def darp(
     energy = np.hypot(diff[..., 0], diff[..., 1]) + 1.0
     fair = len(cells) / n
     step = 10.0 ** -np.ceil(np.log10(len(cells)))
-    # Per-drone balance step, halved on a sign flip (a fixed step oscillates a boundary back and
-    # forth between two drones instead of settling on it). The continuity repair below keeps the
-    # fixed `step`: decaying it the same way weakens connectivity repair until it stops working.
+    # The continuity repair below keeps the fixed `step`: decaying it like the balance steps
+    # weakens connectivity repair until it stops working.
     steps = np.full(n, step)
     prev_sign = np.zeros(n)
 

@@ -20,7 +20,7 @@ def plan_to_geojson(plan: Plan) -> dict[str, Any]:
     frame, drone = plan.frame, plan.config.drone
     features = [
         _feature({"type": "Point", "coordinates": ll}, kind="station", station=i)
-        for i, ll in enumerate(frame.to_lnglat(plan.stations_xy).tolist())
+        for i, ll in enumerate(frame.to_lnglat(plan.stations_xy).round(7).tolist())
     ]
     for obstacle in plan.router.obstacles:
         ring = frame.to_lnglat(np.asarray(obstacle.exterior.coords)).round(7).tolist()

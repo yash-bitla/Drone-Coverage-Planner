@@ -25,9 +25,9 @@ def configs(draw: st.DrawFn) -> PlannerConfig:
     )
 
 
-def stations(draw: st.DrawFn, n: int) -> np.ndarray:
+def stations(data: st.DataObject, n: int) -> np.ndarray:
     coord = st.floats(-10.0, 130.0, allow_nan=False)
-    return np.array([[draw(coord), draw(coord)] for _ in range(n)])
+    return np.array([[data.draw(coord), data.draw(coord)] for _ in range(n)])
 
 
 @SETTINGS
@@ -42,7 +42,7 @@ def test_valid_plans_on_random_masks(
     assume(mask.any())
     grid = Grid.from_mask(mask, 10.0, origin=(0.0, 10.0 * mask.shape[0]))
     plan = plan_on_grid(
-        grid, stations(data.draw, data.draw(st.integers(1, 3))), data.draw(configs()), algorithm
+        grid, stations(data, data.draw(st.integers(1, 3))), data.draw(configs()), algorithm
     )
     assert plan.violations() == []
     assert plan.makespan_s >= plan.metrics().lower_bound_s - 1e-6
@@ -63,7 +63,7 @@ def test_valid_plans_around_obstacles(data: st.DataObject, algorithm: Algorithm)
     except InvalidInputError:
         assume(False)
     router = Router(obstacles)
-    pts = stations(data.draw, data.draw(st.integers(1, 3)))
+    pts = stations(data, data.draw(st.integers(1, 3)))
     assume(not router.contains(pts).any())
     cfg = data.draw(configs())
     near, _ = router.nearest(grid.centers(grid.required_cells()), pts)

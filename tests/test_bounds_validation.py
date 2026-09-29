@@ -9,6 +9,7 @@ from droneplan.config import DroneSpec, PlannerConfig, StationSpec
 from droneplan.geometry.grid import Grid
 from droneplan.geometry.routing import Router
 from droneplan.metrics import compute_metrics
+from droneplan.planner import Algorithm, plan_on_grid
 from droneplan.scheduling.list_scheduler import list_schedule
 from droneplan.scheduling.model import Body, Schedule
 from droneplan.validation import validate_schedule
@@ -90,3 +91,36 @@ def test_metrics() -> None:
     )
     assert (m.coverage_pct, m.redundancy_pct, m.n_flights, m.unmappable_km2) == (100.0, 0.0, 2, 0.0)
     assert m.as_dict()["algorithm"] == "rss"
+
+
+def test_workload_bound_sums_per_cell_when_a_station_sits_on_a_centre() -> None:
+    grid = Grid.from_mask(np.ones((3, 6), dtype=bool), 100.0, origin=(0.0, 300.0))
+    stations = grid.centers(np.array([[0, 0]]))
+    cfg = PlannerConfig(
+        drone=DroneSpec(count=1, range_m=1500, speed_mps=10, accel_mps2=2, reserve_frac=0),
+        station=StationSpec(charge_time_s=100, capacity=1),
+    )
+    bound = lower_bound_s(grid, stations, cfg)
+    near, _ = Router().nearest(grid.centers(grid.required_cells()), stations)
+    old = max(
+        grid.n_required * min(grid.cell_size, 2.0 * float(near.min())) / cfg.drone.speed_mps,
+        2.0 * float(near.max()) / cfg.drone.speed_mps,
+    )
+    assert bound > old
+    for algorithm in Algorithm:
+        plan = plan_on_grid(grid, stations, cfg, algorithm)
+        assert plan.violations() == []
+        assert plan.makespan_s >= bound - 1e-9
+
+
+def test_validator_catches_timing_charging_and_sequence() -> None:
+    s = schedule()
+    a, b = s.flights
+    assert kinds(replace(s, flights=(replace(a, t_land=a.t_launch + 1.0), b))) == {"timing"}
+    assert kinds(replace(s, flights=(replace(a, charge_end=a.charge_start + 1.0), b))) == {
+        "charging"
+    }
+    early = replace(
+        b, drone=a.drone, t_launch=20.0, t_land=55.0, charge_start=55.0, charge_end=85.0
+    )
+    assert kinds(replace(s, flights=(a, early))) == {"sequence"}

@@ -19,14 +19,14 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--obstacles", help="obstacle polygons, optionally with a height field")
     p.add_argument("--height-field", default="height_m")
     p.add_argument("--drones", type=int, required=True)
-    p.add_argument("--range-km", type=float, required=True)
+    p.add_argument("--range-km", type=float, required=True, help="battery range in km")
     p.add_argument("--speed", type=float, required=True, help="top speed in m/s")
-    p.add_argument("--charge-min", type=float, default=30.0)
+    p.add_argument("--charge-min", type=float, default=30.0, help="full charge time in minutes")
     p.add_argument("--capacity", type=int, default=1)
-    p.add_argument("--altitude", type=float, default=100.0)
-    p.add_argument("--fov", type=float, default=60.0)
+    p.add_argument("--altitude", type=float, default=100.0, help="flight altitude in m")
+    p.add_argument("--fov", type=float, default=60.0, help="camera field of view in degrees")
     p.add_argument("--overlap", type=float, default=0.2)
-    p.add_argument("--clearance", type=float, default=20.0)
+    p.add_argument("--clearance", type=float, default=20.0, help="obstacle clearance in m")
     p.add_argument("--algorithm", choices=[a.value for a in Algorithm], default=Algorithm.RSS.value)
     p.add_argument("--out", required=True)
     return p
@@ -52,17 +52,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     except PlannerError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    geojson = plan_to_geojson(plan)
     try:
         with open(args.out, "w") as fh:
-            json.dump(plan_to_geojson(plan), fh)
+            json.dump(geojson, fh)
     except OSError as exc:
         print(f"error: cannot write {args.out}: {exc}", file=sys.stderr)
         return 2
-    m = plan.metrics()
+    m = geojson["properties"]["metrics"]
     print(
-        f"makespan {m.makespan_s / 60:.1f} min (lower bound {m.lower_bound_s / 60:.1f}, "
-        f"gap {m.gap_pct:.1f}%), {m.n_flights} flights, "
-        f"{m.unmappable_km2:.3f} km2 unmappable, solved in {m.solve_time_s:.2f} s"
+        f"makespan {m['makespan_s'] / 60:.1f} min (lower bound {m['lower_bound_s'] / 60:.1f}, "
+        f"gap {m['gap_pct']:.1f}%), {m['n_flights']} flights, "
+        f"{m['unmappable_km2']:.3f} km2 unmappable, solved in {m['solve_time_s']:.2f} s"
     )
     return 0
 

@@ -8,7 +8,7 @@ import shapely
 from pyproj import CRS, Transformer
 from shapely.geometry.base import BaseGeometry
 
-from droneplan._types import FloatArray
+from droneplan._types import FloatArray, as_xy
 from droneplan.errors import InvalidInputError
 
 _WGS84 = CRS.from_epsg(4326)
@@ -19,10 +19,6 @@ def utm_crs_for(lon: float, lat: float) -> CRS:
         raise InvalidInputError(f"({lon}, {lat}) is outside UTM coverage")
     zone = min(int((lon + 180.0) // 6) + 1, 60)
     return CRS.from_epsg((32600 if lat >= 0 else 32700) + zone)
-
-
-def _xy(a: npt.ArrayLike) -> FloatArray:
-    return np.asarray(a, dtype=np.float64).reshape(-1, 2)
 
 
 class Frame:
@@ -46,12 +42,12 @@ class Frame:
         return Frame(self.crs, angle_rad, pivot)
 
     def lnglat_to_utm(self, lnglat: npt.ArrayLike) -> FloatArray:
-        a = _xy(lnglat)
+        a = as_xy(lnglat)
         x, y = self._to_utm.transform(a[:, 0], a[:, 1])
         return np.column_stack([x, y])
 
     def utm_to_lnglat(self, xy: npt.ArrayLike) -> FloatArray:
-        a = _xy(xy)
+        a = as_xy(xy)
         lng, lat = self._to_wgs.transform(a[:, 0], a[:, 1])
         return np.column_stack([lng, lat])
 
@@ -59,7 +55,7 @@ class Frame:
         return self._rotate(self.lnglat_to_utm(lnglat), -self.angle_rad)
 
     def to_lnglat(self, xy: npt.ArrayLike) -> FloatArray:
-        return self.utm_to_lnglat(self._rotate(_xy(xy), self.angle_rad))
+        return self.utm_to_lnglat(self._rotate(as_xy(xy), self.angle_rad))
 
     def geometry_to_utm(self, geom: BaseGeometry) -> BaseGeometry:
         return shapely.transform(geom, self.lnglat_to_utm)

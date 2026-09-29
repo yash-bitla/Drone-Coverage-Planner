@@ -43,12 +43,10 @@ def compute_metrics(
     algorithm: str,
     solve_time_s: float,
 ) -> PlanMetrics:
-    h, w = grid.shape
     visits = np.zeros(grid.shape, dtype=np.int64)
     for f in schedule.flights:
-        rc = f.covered
-        ok = (rc[:, 0] >= 0) & (rc[:, 0] < h) & (rc[:, 1] >= 0) & (rc[:, 1] < w)
-        np.add.at(visits, (rc[ok, 0], rc[ok, 1]), 1)
+        rc = grid.inside(f.covered)
+        np.add.at(visits, (rc[:, 0], rc[:, 1]), 1)
     req = grid.required
     n_req = int(req.sum())
     makespan = schedule.makespan_s

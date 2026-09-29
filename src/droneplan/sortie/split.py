@@ -7,6 +7,7 @@ import numpy as np
 from droneplan._types import FloatArray
 from droneplan.errors import InfeasiblePlanError
 from droneplan.geometry.routing import Router
+from droneplan.kinematics import segment_lengths
 from droneplan.sortie import _kernels
 
 _EPS = 1e-9
@@ -27,7 +28,7 @@ class SplitInput:
     def from_tour(
         cls, tour_xy: FloatArray, stations_xy: FloatArray, router: Router | None = None
     ) -> SplitInput:
-        steps = np.hypot(*np.diff(tour_xy, axis=0).T) if len(tour_xy) > 1 else np.empty(0)
+        steps = segment_lengths(tour_xy)
         near, _ = (router or Router()).nearest(tour_xy, stations_xy)
         return cls(prefix=np.concatenate([[0.0], np.cumsum(steps)]), near=near)
 
@@ -47,9 +48,7 @@ def split_tour(inp: SplitInput, budget_m: float) -> list[Span]:
     if len(inp.near) == 0:
         return []
     inp.check_reachable(budget_m)
-    f, pred = _kernels.split_dp(inp.prefix, inp.near, float(budget_m) + _EPS)
-    if not np.isfinite(f[-1]):
-        raise InfeasiblePlanError("tour cannot be split within the sortie budget")
+    _, pred = _kernels.split_dp(inp.prefix, inp.near, float(budget_m) + _EPS)
     spans: list[Span] = []
     j = len(inp.near)
     while j > 0:

@@ -13,10 +13,6 @@ class Lane:
     col_start: int
     col_end: int
 
-    @property
-    def n_cells(self) -> int:
-        return self.col_end - self.col_start + 1
-
 
 def extract_lanes(mask: BoolArray) -> list[Lane]:
     lanes: list[Lane] = []

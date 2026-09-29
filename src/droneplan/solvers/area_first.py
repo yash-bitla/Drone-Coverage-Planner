@@ -7,7 +7,7 @@ from typing import Literal
 
 import numpy as np
 
-from droneplan._types import FloatArray
+from droneplan._types import BoolArray, FloatArray, IntArray
 from droneplan.baselines.darp import darp, farthest_point_seeds
 from droneplan.baselines.greedy_refuel import greedy_refuel
 from droneplan.baselines.stc import stc_path
@@ -21,13 +21,12 @@ from droneplan.scheduling.model import Schedule, initial_stations
 
 def _stc_with_leftovers(
     grid: Grid,
-    region: np.ndarray,
+    region: BoolArray,
     station_xy: FloatArray,
     stations_xy: FloatArray,
     cfg: PlannerConfig,
     router: Router,
-) -> tuple[FloatArray, np.ndarray]:
-    assert grid.blocked is not None
+) -> tuple[FloatArray, IntArray]:
     region_cells = np.argwhere(region)
     start = region_cells[int(np.argmin(np.hypot(*(grid.centers(region_cells) - station_xy).T)))]
     start_rc = (int(start[0]), int(start[1]))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 
 import numpy as np
@@ -10,15 +11,13 @@ from scipy.sparse.csgraph import shortest_path
 from shapely.geometry import Polygon
 from shapely.geometry.polygon import orient
 
-from droneplan._types import BoolArray, FloatArray, IntArray
+from droneplan._types import BoolArray, FloatArray, IntArray, as_xy
 from droneplan.errors import InfeasiblePlanError, InvalidInputError
 
 _TOUCH_TOLERANCE_M = 0.01
 _CHUNK_ELEMENTS = 4_000_000
 
-
-def _xy(a: npt.ArrayLike) -> FloatArray:
-    return np.asarray(a, dtype=np.float64).reshape(-1, 2)
+_log = logging.getLogger(__name__)
 
 
 def _convex_vertices(obstacles: Sequence[Polygon]) -> FloatArray:
@@ -55,7 +54,7 @@ class Router:
         blockers = [o.buffer(-_TOUCH_TOLERANCE_M) for o in self.obstacles]
         self._tree = shapely.STRtree(blockers) if blockers else None
         self._boxes = np.array([b.bounds for b in blockers], dtype=np.float64).reshape(-1, 4)
-        self._union = shapely.union_all(self.obstacles) if self.obstacles else None
+        self._union = shapely.MultiPolygon(self.obstacles) if self.obstacles else None
         self.nodes = _convex_vertices(self.obstacles)
         self._dist, self._pred = self._all_pairs()
 
@@ -64,13 +63,13 @@ class Router:
         return self._tree is not None
 
     def contains(self, points: npt.ArrayLike) -> BoolArray:
-        p = _xy(points)
+        p = as_xy(points)
         if self._union is None:
             return np.zeros(len(p), dtype=bool)
         return np.asarray(shapely.contains_xy(self._union, p[:, 0], p[:, 1]), dtype=bool)
 
     def clear(self, a: npt.ArrayLike, b: npt.ArrayLike) -> BoolArray:
-        a, b = _xy(a), _xy(b)
+        a, b = as_xy(a), as_xy(b)
         out = np.ones(len(a), dtype=bool)
         if self._tree is None or len(a) == 0:
             return out
@@ -93,7 +92,7 @@ class Router:
         self, a: npt.ArrayLike, b: npt.ArrayLike
     ) -> tuple[FloatArray, FloatArray, FloatArray]:
         """Pairwise a[i] -> b[i]: (distance, heading of the first leg, heading of the last leg)."""
-        a, b = _xy(a), _xy(b)
+        a, b = as_xy(a), as_xy(b)
         d = b - a
         dist = np.hypot(d[:, 0], d[:, 1])
         first = np.arctan2(d[:, 1], d[:, 0])
@@ -119,12 +118,12 @@ class Router:
         return dist, first, last
 
     def distances(self, points: npt.ArrayLike, targets: npt.ArrayLike) -> FloatArray:
-        p, t = _xy(points), _xy(targets)
+        p, t = as_xy(points), as_xy(targets)
         pi, ti = np.repeat(np.arange(len(p)), len(t)), np.tile(np.arange(len(t)), len(p))
         return self.routes(p[pi], t[ti])[0].reshape(len(p), len(t))
 
     def nearest(self, points: npt.ArrayLike, targets: npt.ArrayLike) -> tuple[FloatArray, IntArray]:
-        p, t = _xy(points), _xy(targets)
+        p, t = as_xy(points), as_xy(targets)
         if len(t) == 0:
             raise InvalidInputError("at least one station is required")
         dist = np.hypot(p[:, None, 0] - t[None, :, 0], p[:, None, 1] - t[None, :, 1])
@@ -142,7 +141,7 @@ class Router:
         return dist[np.arange(len(p)), idx], idx.astype(np.int64)
 
     def path(self, p: npt.ArrayLike, q: npt.ArrayLike) -> FloatArray:
-        p0, q0 = _xy(p)[0], _xy(q)[0]
+        p0, q0 = as_xy(p)[0], as_xy(q)[0]
         if self.clear(p0, q0)[0]:
             return np.array([p0, q0])
         total = (
@@ -180,6 +179,7 @@ class Router:
         ok = self.clear(self.nodes[i], self.nodes[j])
         w = np.hypot(*(self.nodes[j[ok]] - self.nodes[i[ok]]).T)
         graph = csr_matrix((w, (i[ok], j[ok])), shape=(v, v))
+        _log.debug("visibility graph: %d nodes, %d edges", v, graph.nnz)
         dist, pred = shortest_path(graph, method="D", directed=False, return_predecessors=True)
         return dist, pred.astype(np.int64)
 

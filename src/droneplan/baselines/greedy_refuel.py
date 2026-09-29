@@ -5,6 +5,7 @@ import numpy as np
 from droneplan._types import FloatArray, IntArray
 from droneplan.errors import InfeasiblePlanError
 from droneplan.geometry.routing import Router
+from droneplan.kinematics import segment_lengths
 from droneplan.scheduling.fixed_scheduler import PlannedFlight
 
 _EPS = 1e-9
@@ -26,7 +27,7 @@ def greedy_refuel(
     near, near_idx = router.nearest(path_xy, stations_xy)
     if (2 * near > usable_range_m + _EPS).any():
         raise InfeasiblePlanError("some cells are out of round-trip range of every station")
-    steps = np.hypot(*np.diff(path_xy, axis=0).T) if len(path_xy) > 1 else np.empty(0)
+    steps = segment_lengths(path_xy)
 
     def planned(i0: int, k: int, launch: int, land: int) -> PlannedFlight:
         path = np.vstack(
