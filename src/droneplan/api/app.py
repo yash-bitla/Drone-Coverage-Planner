@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import multiprocessing
 import os
+import shutil
 import tempfile
 from collections.abc import AsyncIterator
 from concurrent.futures import Executor, ProcessPoolExecutor
@@ -35,7 +37,8 @@ def _parse(path: Path, kind: str) -> dict[str, Any]:
 
 def create_app(executor: Executor | None = None, static_dir: Path | None = None) -> FastAPI:
     pool = executor or ProcessPoolExecutor(
-        max_workers=int(os.environ.get("DRONEPLAN_WORKERS", "2"))
+        max_workers=int(os.environ.get("DRONEPLAN_WORKERS", "2")),
+        mp_context=multiprocessing.get_context("forkserver"),
     )
     store = JobStore(pool)
 
@@ -55,16 +58,18 @@ def create_app(executor: Executor | None = None, static_dir: Path | None = None)
         file: Annotated[UploadFile, File()],
         kind: Annotated[Literal["area", "points", "obstacles"], Form()],
     ) -> dict[str, Any]:
-        suffix = Path(file.filename or "").suffix.lower()
+        name = Path(file.filename or "upload").name
+        suffix = Path(name).suffix.lower()
         if suffix not in _UPLOAD_SUFFIXES:
             raise HTTPException(400, f"upload a {', '.join(sorted(_UPLOAD_SUFFIXES))} file")
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / f"upload{suffix}"
-            path.write_bytes(file.file.read())
+            with path.open("wb") as fh:
+                shutil.copyfileobj(file.file, fh)
             try:
                 return _parse(path, kind)
             except InvalidInputError as exc:
-                raise HTTPException(400, str(exc)) from exc
+                raise HTTPException(400, str(exc).replace(str(path), name)) from exc
 
     @app.post("/api/plans", status_code=202)
     def submit(req: PlanRequest) -> dict[str, str]:

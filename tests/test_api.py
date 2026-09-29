@@ -1,4 +1,5 @@
 import io
+import tempfile
 import threading
 import time
 import zipfile
@@ -157,3 +158,13 @@ def test_unexpected_exception_is_reported_as_internal_error(
     assert job is not None
     assert job.status == "failed"
     assert job.error == "internal error"
+
+
+def test_parse_error_names_the_upload_not_the_temp_path() -> None:
+    res = client().post(
+        "/api/parse", data={"kind": "area"}, files={"file": ("mine.geojson", b"not geojson")}
+    )
+    assert res.status_code == 400
+    detail = res.json()["detail"]
+    assert detail.startswith("mine.geojson: ")
+    assert tempfile.gettempdir() not in detail
