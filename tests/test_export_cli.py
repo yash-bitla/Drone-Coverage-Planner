@@ -97,3 +97,15 @@ def test_cli_unwritable_out_reports_error(tmp_path: Path) -> None:
         ]
     )
     assert code == 2
+
+
+def test_geojson_carries_config_for_the_viewer() -> None:
+    gj = plan_to_geojson(plan_area(AREA, np.array([[78.0, 20.0]]), CFG))
+    assert gj["properties"]["config"] == {
+        "drones": 2,
+        "range_m": 8000.0,
+        "usable_range_m": 7200.0,
+        "speed_mps": 12.0,
+        "charge_time_s": 1800.0,
+        "capacity": 1,
+    }
