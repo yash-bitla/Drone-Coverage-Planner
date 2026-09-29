@@ -21,7 +21,8 @@ from droneplan.geometry.sweep import min_width_sweep_angle
 from droneplan.metrics import PlanMetrics, compute_metrics
 from droneplan.scheduling.model import Schedule
 from droneplan.solvers.area_first import solve_darp_boustrophedon, solve_darp_stc
-from droneplan.solvers.rss import solve_rss
+from droneplan.solvers.rss import min_feasible, solve_rss
+from droneplan.sortie.split import greedy_split
 from droneplan.validation import Violation, validate_schedule
 
 
@@ -43,7 +44,7 @@ Solver = Callable[[Grid, FloatArray, PlannerConfig, Router], Schedule]
 SOLVERS: dict[Algorithm, Solver] = {
     Algorithm.RSS: solve_rss,
     Algorithm.RSS_FIXED_ANGLE: solve_rss,  # same solver; plan_area skips the rotation
-    Algorithm.RSS_GREEDY_SPLIT: partial(solve_rss, greedy=True),
+    Algorithm.RSS_GREEDY_SPLIT: partial(solve_rss, splitters=(greedy_split,)),
     Algorithm.RSS_FULL_BUDGET: partial(solve_rss, search_budget=False),
     Algorithm.DARP_STC: solve_darp_stc,
     Algorithm.DARP_BOUSTROPHEDON: solve_darp_boustrophedon,
@@ -122,28 +123,36 @@ def plan_area(
     """Plan from lon/lat inputs; `obstacles` are raw footprints with heights, filtered by the
     flight altitude and inflated by the clearance here.
 
-    The result carries its frame, so it can be exported with `plan_to_geojson`.
+    The result carries its frame, so it can be exported with `plan_to_geojson`. Algorithms that
+    optimize the sweep angle also plan at angle 0 and keep the lower makespan; `solve_time_s`
+    covers the whole call.
     """
+    t0 = time.perf_counter()
     algorithm = _algorithm(algorithm)
     base = Frame.for_geometry(area_lnglat)
     area_utm = base.geometry_to_utm(area_lnglat)
-    angle = min_width_sweep_angle(area_utm) if algorithm.optimizes_sweep_angle else 0.0
     pivot = area_utm.centroid
-    frame = base.rotated(angle, (pivot.x, pivot.y))
-    footprints = [
-        frame.geometry_to_plan(o.geometry)
-        for o in obstacles
-        if o.blocks(cfg.sensor.altitude_m, cfg.clearance_m)
-    ]
-    inflated = inflate(
-        footprints, clearance_m=cfg.clearance_m, simplify_m=cfg.sensor.footprint_m / 4
-    )
-    grid = rasterize(
-        frame.geometry_to_plan(area_lnglat),
-        cfg.sensor.footprint_m,
-        max_cells=cfg.max_cells,
-        obstacles=inflated,
-    )
-    stations = frame.to_plan(np.asarray(stations_lnglat, dtype=np.float64).reshape(-1, 2))
-    plan = plan_on_grid(grid, stations, cfg, algorithm, Router(inflated))
-    return replace(plan, frame=frame)
+    angles = [min_width_sweep_angle(area_utm), 0.0] if algorithm.optimizes_sweep_angle else [0.0]
+
+    def plan_at(angle: float) -> Plan:
+        frame = base.rotated(angle, (pivot.x, pivot.y))
+        footprints = [
+            frame.geometry_to_plan(o.geometry)
+            for o in obstacles
+            if o.blocks(cfg.sensor.altitude_m, cfg.clearance_m)
+        ]
+        inflated = inflate(
+            footprints, clearance_m=cfg.clearance_m, simplify_m=cfg.sensor.footprint_m / 4
+        )
+        grid = rasterize(
+            frame.geometry_to_plan(area_lnglat),
+            cfg.sensor.footprint_m,
+            max_cells=cfg.max_cells,
+            obstacles=inflated,
+        )
+        stations = frame.to_plan(np.asarray(stations_lnglat, dtype=np.float64).reshape(-1, 2))
+        plan = plan_on_grid(grid, stations, cfg, algorithm, Router(inflated))
+        return replace(plan, frame=frame)
+
+    best = min_feasible((partial(plan_at, a) for a in angles), key=lambda p: p.makespan_s)
+    return replace(best, solve_time_s=time.perf_counter() - t0)

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Sequence
+from functools import partial
 
 import numpy as np
 
@@ -13,9 +14,11 @@ from droneplan.geometry.grid import Grid
 from droneplan.geometry.routing import Router
 from droneplan.scheduling.list_scheduler import list_schedule
 from droneplan.scheduling.model import Body, Schedule
-from droneplan.sortie.split import SplitInput, greedy_split, split_tour
+from droneplan.sortie.split import Span, SplitInput, greedy_split, split_tour
 
 _GOLDEN = (math.sqrt(5) - 1) / 2
+
+Splitter = Callable[[SplitInput, float], list[Span]]
 
 
 def solve_rss(
@@ -24,15 +27,20 @@ def solve_rss(
     cfg: PlannerConfig,
     router: Router,
     *,
-    greedy: bool = False,
+    splitters: Sequence[Splitter] = (split_tour, greedy_split),
     search_budget: bool = True,
 ) -> Schedule:
+    """Best schedule over `splitters`, each with its own budget search.
+
+    The DP split is optimal in energy, not makespan, so the greedy split sometimes wins.
+    """
     tour = build_tour(grid, stations_xy, cfg.drone, router)
     inp = SplitInput.from_tour(tour.xy, stations_xy, router)
     is_cell = tour.rc[:, 0] >= 0
-    splitter = greedy_split if greedy else split_tour
+    usable = cfg.drone.usable_range_m
+    lo = 2.0 * float(inp.near.max()) + grid.cell_size
 
-    def evaluate(budget_m: float) -> Schedule:
+    def evaluate(splitter: Splitter, budget_m: float) -> Schedule:
         bodies = [
             Body(
                 tour.xy[s.start : s.end + 1],
@@ -42,11 +50,30 @@ def solve_rss(
         ]
         return list_schedule(bodies, stations_xy, cfg, router)
 
-    usable = cfg.drone.usable_range_m
-    lo = 2.0 * float(inp.near.max()) + grid.cell_size
-    if not search_budget or lo >= usable:
-        return evaluate(usable)
-    return search_budget_min_makespan(evaluate, lo, usable)
+    def solve(splitter: Splitter) -> Schedule:
+        if not search_budget or lo >= usable:
+            return evaluate(splitter, usable)
+        return search_budget_min_makespan(partial(evaluate, splitter), lo, usable)
+
+    return min_feasible((partial(solve, s) for s in splitters), key=lambda s: s.makespan_s)
+
+
+def min_feasible[T](attempts: Iterable[Callable[[], T]], key: Callable[[T], float]) -> T:
+    """The best result among attempts that don't raise InfeasiblePlanError.
+
+    Re-raises the last error if every attempt is infeasible.
+    """
+    results: list[T] = []
+    error: InfeasiblePlanError | None = None
+    for attempt in attempts:
+        try:
+            results.append(attempt())
+        except InfeasiblePlanError as exc:
+            error = exc
+    if not results:
+        assert error is not None
+        raise error
+    return min(results, key=key)
 
 
 def search_budget_min_makespan(
