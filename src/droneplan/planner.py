@@ -20,6 +20,7 @@ from droneplan.geometry.routing import Router
 from droneplan.geometry.sweep import min_width_sweep_angle
 from droneplan.metrics import PlanMetrics, compute_metrics
 from droneplan.scheduling.model import Schedule
+from droneplan.solvers.area_first import solve_darp_boustrophedon, solve_darp_stc
 from droneplan.solvers.rss import solve_rss
 from droneplan.validation import Violation, validate_schedule
 
@@ -44,6 +45,8 @@ SOLVERS: dict[Algorithm, Solver] = {
     Algorithm.RSS_FIXED_ANGLE: solve_rss,  # same solver; plan_area skips the rotation
     Algorithm.RSS_GREEDY_SPLIT: partial(solve_rss, greedy=True),
     Algorithm.RSS_FULL_BUDGET: partial(solve_rss, search_budget=False),
+    Algorithm.DARP_STC: solve_darp_stc,
+    Algorithm.DARP_BOUSTROPHEDON: solve_darp_boustrophedon,
 }
 
 
