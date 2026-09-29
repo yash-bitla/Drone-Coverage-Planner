@@ -10,3 +10,5 @@ dist/
 /docs/*
 !/docs/tech-spec.md
 .DS_Store
+web/node_modules/
+web/dist/
