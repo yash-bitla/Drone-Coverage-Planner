@@ -42,7 +42,16 @@ class Router:
     """
 
     def __init__(self, obstacles: Sequence[Polygon] = ()) -> None:
-        self.obstacles = tuple(obstacles)
+        merged = (
+            [
+                p
+                for p in shapely.get_parts(shapely.union_all(obstacles))
+                if p.geom_type == "Polygon" and p.area > 0
+            ]
+            if obstacles
+            else []
+        )
+        self.obstacles = tuple(merged)
         blockers = [o.buffer(-_TOUCH_TOLERANCE_M) for o in self.obstacles]
         self._tree = shapely.STRtree(blockers) if blockers else None
         self._boxes = np.array([b.bounds for b in blockers], dtype=np.float64).reshape(-1, 4)

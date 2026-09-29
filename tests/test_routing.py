@@ -59,3 +59,11 @@ def test_connect_inserts_waypoints() -> None:
 
 def test_contains() -> None:
     assert Router([WALL]).contains([[50.0, 0.0], [0.0, 0.0]]).tolist() == [True, False]
+
+
+def test_merges_touching_obstacles() -> None:
+    r = Router([box(0, 0, 10, 10), box(10, 0, 20, 10)])
+    path = r.path([10, -5], [10, 15])
+    assert path.tolist() != [[10.0, -5.0], [10.0, 15.0]]
+    assert r.clear(path[:-1], path[1:]).all()
+    assert polyline_length(path) > 20.0
