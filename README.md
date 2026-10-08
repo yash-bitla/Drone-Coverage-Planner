@@ -1,8 +1,13 @@
-# Drone Route Planning
+# Drone Coverage Planner
 
-Plans the fastest way for a fleet of battery-limited drones to map an area, recharging at automatic stations and flying around obstacles. Built from the ISRO problem statement (Smart India Hackathon 2020).
+Multi-drone coverage path planning with battery limits, charging stations and obstacles. Given an area to map, a fleet, and the stations where drones recharge, it plans every flight and the charging schedule so that the last drone lands as early as possible.
 
-This is a from-scratch rebuild of our team's SIH 2020 project, [CoveragePathPlanning](https://github.com/18alantom/CoveragePathPlanning) (v1 throughout this README), which it benchmarks against.
+- **41% faster than the baseline.** On 60 seeded instances, the plans finish in about 41% less time than the DARP + STC approach that our team built in 2020, and no other algorithm here beats them on any instance.
+- **Every plan is checked.** An independent validator verifies coverage, battery range, obstacle clearance, timing and charging-pad capacity for all 360 benchmark plans.
+- **The split is optimal for a given tour.** A dynamic program cuts one coverage tour into battery-feasible flights at the cheapest points, and the tests check it against brute force.
+- **It runs end to end.** A Python library, a CLI, a FastAPI service, and a React + Leaflet app that replays the plan.
+
+Built from the ISRO problem statement (Smart India Hackathon 2020). This is a from-scratch rebuild of our team's SIH 2020 project, [CoveragePathPlanning](https://github.com/18alantom/CoveragePathPlanning) (v1 throughout this README), which it benchmarks against.
 
 ![Replay of a 4-drone plan over Los Angeles: coverage lanes, drone states and batteries, and the schedule Gantt, compared with the v1 baseline](demo.gif)
 
@@ -25,11 +30,18 @@ The objective is **makespan**: the time until the last drone lands with every ma
 **Delivery.** A Python library and CLI (`droneplan`), a FastAPI service, and a React + Leaflet app that replays the plan: each drone's position, state and battery, a schedule Gantt chart, and metrics next to the v1 baseline. There is also GeoJSON export with per-vertex timestamps, a benchmark runner, and CI.
 
 ## Quick start
+Plan the bundled example (an area with obstacles and charging stations):
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-droneplan area.shp --stations stations.geojson --obstacles buildings.shp \
-  --drones 4 --range-km 10 --speed 15 --out plan.geojson
+droneplan examples/area.geojson --stations examples/stations.geojson \
+  --obstacles examples/obstacles.geojson \
+  --drones 4 --range-km 12 --speed 15 --out plan.geojson
 ```
+It prints a summary and writes the plan as GeoJSON with per-vertex timestamps:
+```
+makespan 231.7 min (lower bound 146.7, gap 57.9%), 26 flights, 0.614 km2 unmappable, solved in 1.44 s
+```
+The area can also be a shapefile (`.shp` or `.zip`). Run `droneplan --help` for the flight and camera options.
 
 ## Run the app
 ```bash
