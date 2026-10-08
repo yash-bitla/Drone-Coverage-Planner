@@ -30,7 +30,7 @@ The objective is **makespan**: the time until the last drone lands with every ma
 **Delivery.** A Python library and CLI (`droneplan`), a FastAPI service, and a React + Leaflet app that replays the plan: each drone's position, state and battery, a schedule Gantt chart, and metrics next to the v1 baseline. There is also GeoJSON export with per-vertex timestamps, a benchmark runner, and CI.
 
 ## Quick start
-Plan the bundled example (an area in Los Angeles with building obstacles and charging stations):
+Plan the bundled example (an area with obstacles and charging stations):
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 droneplan examples/area.geojson --stations examples/stations.geojson \
