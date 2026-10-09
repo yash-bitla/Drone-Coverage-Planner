@@ -9,6 +9,8 @@ Multi-drone coverage path planning with battery limits, charging stations and ob
 
 Built from the ISRO problem statement (Smart India Hackathon 2020). This is a from-scratch rebuild of our team's SIH 2020 project, [CoveragePathPlanning](https://github.com/18alantom/CoveragePathPlanning) (v1 throughout this README), which it benchmarks against.
 
+The story of the rebuild is in the blog post [In 2020 we gave every drone an equal share of the map. That was the mistake.](https://yashbitla.com/blog/equal-share-of-the-map/)
+
 ![Replay of a 4-drone plan over Los Angeles: coverage lanes, drone states and batteries, and the schedule Gantt, compared with the v1 baseline](demo.gif)
 
 ## The problem
